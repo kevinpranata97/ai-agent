@@ -28,7 +28,14 @@ import {
   Zap,
   BarChart3,
   Users,
-  Server
+  Server,
+  Brain,
+  TestTube,
+  Upload,
+  Download,
+  FileText,
+  Cpu,
+  HardDrive
 } from 'lucide-react'
 import './App.css'
 
@@ -46,10 +53,24 @@ function App() {
     activeTasks: 0,
     failedTasks: 0
   })
+  
+  // New state for LLM fine-tuning
+  const [fineTuningJobs, setFineTuningJobs] = useState([])
+  const [fineTunedModels, setFineTunedModels] = useState([])
+  const [newFineTuningJob, setNewFineTuningJob] = useState({
+    model: 'gpt-3.5-turbo',
+    training_data: '',
+    suffix: ''
+  })
+  
+  // New state for application testing
+  const [testSessions, setTestSessions] = useState([])
+  const [projectPath, setProjectPath] = useState('')
+  const [testResults, setTestResults] = useState(null)
 
   // Mock data for demonstration
   useEffect(() => {
-    const mockTasks = [
+    setTasks([
       {
         id: '1',
         description: 'Create a responsive landing page for a tech startup',
@@ -57,8 +78,7 @@ function App() {
         priority: 'high',
         status: 'completed',
         progress: 100,
-        created_at: '2024-12-25T10:00:00Z',
-        completed_at: '2024-12-25T11:30:00Z'
+        createdAt: '2024-12-25T10:00:00Z'
       },
       {
         id: '2',
@@ -67,7 +87,7 @@ function App() {
         priority: 'medium',
         status: 'in_progress',
         progress: 65,
-        created_at: '2024-12-25T12:00:00Z'
+        createdAt: '2024-12-25T12:00:00Z'
       },
       {
         id: '3',
@@ -75,17 +95,53 @@ function App() {
         type: 'data_analysis',
         priority: 'low',
         status: 'planning',
-        progress: 10,
-        created_at: '2024-12-25T13:00:00Z'
+        progress: 15,
+        createdAt: '2024-12-25T13:00:00Z'
       }
-    ]
-    setTasks(mockTasks)
+    ])
+
     setSystemStats({
-      totalTasks: mockTasks.length,
-      completedTasks: mockTasks.filter(t => t.status === 'completed').length,
-      activeTasks: mockTasks.filter(t => t.status === 'in_progress').length,
-      failedTasks: mockTasks.filter(t => t.status === 'failed').length
+      totalTasks: 3,
+      completedTasks: 1,
+      activeTasks: 1,
+      failedTasks: 0
     })
+    
+    // Mock fine-tuning data
+    setFineTuningJobs([
+      {
+        id: 'ftjob-123',
+        model: 'gpt-3.5-turbo',
+        status: 'succeeded',
+        created_at: '2024-12-25T09:00:00Z',
+        fine_tuned_model: 'ft:gpt-3.5-turbo:custom:model-123'
+      },
+      {
+        id: 'ftjob-124',
+        model: 'gpt-3.5-turbo',
+        status: 'running',
+        created_at: '2024-12-25T14:00:00Z',
+        fine_tuned_model: null
+      }
+    ])
+    
+    setFineTunedModels([
+      {
+        id: 'ft:gpt-3.5-turbo:custom:model-123',
+        created: 1703505600,
+        owned_by: 'user'
+      }
+    ])
+    
+    // Mock test sessions
+    setTestSessions([
+      {
+        id: 'test_1703505600',
+        project_path: '/projects/landing-page',
+        overall_success: true,
+        timestamp: '2024-12-25T15:00:00Z'
+      }
+    ])
   }, [])
 
   const handleCreateTask = () => {
@@ -96,125 +152,184 @@ function App() {
       ...newTask,
       status: 'created',
       progress: 0,
-      created_at: new Date().toISOString()
+      createdAt: new Date().toISOString()
     }
 
     setTasks(prev => [task, ...prev])
     setNewTask({ description: '', type: 'general', priority: 'medium' })
-    setSystemStats(prev => ({ ...prev, totalTasks: prev.totalTasks + 1 }))
+  }
+  
+  const handleCreateFineTuningJob = () => {
+    if (!newFineTuningJob.training_data.trim()) return
+
+    const job = {
+      id: `ftjob-${Date.now()}`,
+      ...newFineTuningJob,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      fine_tuned_model: null
+    }
+
+    setFineTuningJobs(prev => [job, ...prev])
+    setNewFineTuningJob({ model: 'gpt-3.5-turbo', training_data: '', suffix: '' })
+  }
+  
+  const handleRunTests = () => {
+    if (!projectPath.trim()) return
+
+    const session = {
+      id: `test_${Date.now()}`,
+      project_path: projectPath,
+      overall_success: Math.random() > 0.3, // Random success for demo
+      timestamp: new Date().toISOString()
+    }
+
+    setTestSessions(prev => [session, ...prev])
+    setProjectPath('')
   }
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'completed': return <CheckCircle className="h-4 w-4 text-green-500" />
-      case 'in_progress': return <Clock className="h-4 w-4 text-blue-500" />
-      case 'failed': return <XCircle className="h-4 w-4 text-red-500" />
-      case 'planning': return <AlertCircle className="h-4 w-4 text-yellow-500" />
-      default: return <Clock className="h-4 w-4 text-gray-500" />
+      case 'completed':
+      case 'succeeded':
+        return <CheckCircle className="h-4 w-4 text-green-500" />
+      case 'in_progress':
+      case 'running':
+        return <Clock className="h-4 w-4 text-blue-500" />
+      case 'failed':
+        return <XCircle className="h-4 w-4 text-red-500" />
+      case 'planning':
+      case 'pending':
+        return <AlertCircle className="h-4 w-4 text-yellow-500" />
+      default:
+        return <Clock className="h-4 w-4 text-gray-500" />
     }
   }
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-      case 'in_progress': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
-      case 'failed': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
-      case 'planning': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+      case 'completed':
+      case 'succeeded':
+        return 'bg-green-100 text-green-800'
+      case 'in_progress':
+      case 'running':
+        return 'bg-blue-100 text-blue-800'
+      case 'failed':
+        return 'bg-red-100 text-red-800'
+      case 'planning':
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
     }
   }
 
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
-      case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-      case 'low': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+      case 'high':
+        return 'bg-red-100 text-red-800'
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'low':
+        return 'bg-green-100 text-green-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const getTypeIcon = (type) => {
+    switch (type) {
+      case 'website_creation':
+        return <Globe className="h-4 w-4" />
+      case 'app_development':
+        return <Code className="h-4 w-4" />
+      case 'data_analysis':
+        return <BarChart3 className="h-4 w-4" />
+      case 'llm_finetuning':
+        return <Brain className="h-4 w-4" />
+      case 'app_testing':
+        return <TestTube className="h-4 w-4" />
+      default:
+        return <Terminal className="h-4 w-4" />
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg">
-                <Bot className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  AI Agent Dashboard
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Intelligent Task Management & Automation
-                </p>
-              </div>
+      <header className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="bg-blue-600 p-2 rounded-lg">
+              <Bot className="h-6 w-6 text-white" />
             </div>
-            <div className="flex items-center space-x-3">
-              <Badge variant="outline" className="flex items-center space-x-1">
-                <div className={`w-2 h-2 rounded-full ${agentStatus === 'running' ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span className="capitalize">{agentStatus}</span>
-              </Badge>
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">AI Agent Dashboard</h1>
+              <p className="text-sm text-gray-500">Intelligent Task Management & Automation</p>
             </div>
+          </div>
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
+              <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm text-gray-600 capitalize">{agentStatus}</span>
+            </div>
+            <Button variant="outline" size="sm">
+              <Settings className="h-4 w-4 mr-2" />
+              Settings
+            </Button>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6">
-        {/* Stats Overview */}
+      {/* Stats Cards */}
+      <div className="px-6 py-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0">
+          <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-blue-100 text-sm font-medium">Total Tasks</p>
-                  <p className="text-3xl font-bold">{systemStats.totalTasks}</p>
+                  <p className="text-sm font-medium text-gray-600">Total Tasks</p>
+                  <p className="text-3xl font-bold text-blue-600">{systemStats.totalTasks}</p>
                 </div>
-                <BarChart3 className="h-8 w-8 text-blue-200" />
+                <BarChart3 className="h-8 w-8 text-blue-600" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white border-0">
+          <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-green-100 text-sm font-medium">Completed</p>
-                  <p className="text-3xl font-bold">{systemStats.completedTasks}</p>
+                  <p className="text-sm font-medium text-gray-600">Completed</p>
+                  <p className="text-3xl font-bold text-green-600">{systemStats.completedTasks}</p>
                 </div>
-                <CheckCircle className="h-8 w-8 text-green-200" />
+                <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-0">
+          <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-yellow-100 text-sm font-medium">Active</p>
-                  <p className="text-3xl font-bold">{systemStats.activeTasks}</p>
+                  <p className="text-sm font-medium text-gray-600">Active</p>
+                  <p className="text-3xl font-bold text-orange-600">{systemStats.activeTasks}</p>
                 </div>
-                <Zap className="h-8 w-8 text-yellow-200" />
+                <Zap className="h-8 w-8 text-orange-600" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white border-0">
+          <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-purple-100 text-sm font-medium">Success Rate</p>
-                  <p className="text-3xl font-bold">
+                  <p className="text-sm font-medium text-gray-600">Success Rate</p>
+                  <p className="text-3xl font-bold text-purple-600">
                     {systemStats.totalTasks > 0 ? Math.round((systemStats.completedTasks / systemStats.totalTasks) * 100) : 0}%
                   </p>
                 </div>
-                <Activity className="h-8 w-8 text-purple-200" />
+                <Activity className="h-8 w-8 text-purple-600" />
               </div>
             </CardContent>
           </Card>
@@ -222,7 +337,7 @@ function App() {
 
         {/* Main Content */}
         <Tabs defaultValue="tasks" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="tasks" className="flex items-center space-x-2">
               <Terminal className="h-4 w-4" />
               <span>Tasks</span>
@@ -231,13 +346,17 @@ function App() {
               <Plus className="h-4 w-4" />
               <span>Create</span>
             </TabsTrigger>
-            <TabsTrigger value="monitoring" className="flex items-center space-x-2">
+            <TabsTrigger value="monitor" className="flex items-center space-x-2">
               <Monitor className="h-4 w-4" />
               <span>Monitor</span>
             </TabsTrigger>
-            <TabsTrigger value="capabilities" className="flex items-center space-x-2">
-              <Code className="h-4 w-4" />
-              <span>Capabilities</span>
+            <TabsTrigger value="finetuning" className="flex items-center space-x-2">
+              <Brain className="h-4 w-4" />
+              <span>Fine-tuning</span>
+            </TabsTrigger>
+            <TabsTrigger value="testing" className="flex items-center space-x-2">
+              <TestTube className="h-4 w-4" />
+              <span>Testing</span>
             </TabsTrigger>
             <TabsTrigger value="system" className="flex items-center space-x-2">
               <Server className="h-4 w-4" />
@@ -253,53 +372,52 @@ function App() {
                   <Terminal className="h-5 w-5" />
                   <span>Task Management</span>
                 </CardTitle>
-                <CardDescription>
-                  Monitor and manage all AI agent tasks
-                </CardDescription>
+                <CardDescription>Monitor and manage all AI agent tasks</CardDescription>
               </CardHeader>
               <CardContent>
                 <ScrollArea className="h-96">
                   <div className="space-y-4">
                     {tasks.map((task) => (
-                      <Card key={task.id} className="p-4 hover:shadow-md transition-shadow">
+                      <div key={task.id} className="border rounded-lg p-4 space-y-3">
                         <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-2">
-                              {getStatusIcon(task.status)}
-                              <h3 className="font-semibold">{task.description}</h3>
-                            </div>
-                            <div className="flex items-center space-x-4 mb-3">
-                              <Badge className={getStatusColor(task.status)}>
-                                {task.status.replace('_', ' ')}
-                              </Badge>
-                              <Badge className={getPriorityColor(task.priority)}>
-                                {task.priority}
-                              </Badge>
-                              <Badge variant="outline">
-                                {task.type.replace('_', ' ')}
-                              </Badge>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between text-sm">
-                                <span>Progress</span>
-                                <span>{task.progress}%</span>
+                          <div className="flex items-start space-x-3">
+                            {getStatusIcon(task.status)}
+                            <div className="flex-1">
+                              <h3 className="font-medium text-gray-900">{task.description}</h3>
+                              <div className="flex items-center space-x-2 mt-1">
+                                <Badge variant="secondary" className={getStatusColor(task.status)}>
+                                  {task.status}
+                                </Badge>
+                                <Badge variant="outline" className={getPriorityColor(task.priority)}>
+                                  {task.priority}
+                                </Badge>
+                                <Badge variant="outline" className="flex items-center space-x-1">
+                                  {getTypeIcon(task.type)}
+                                  <span>{task.type.replace('_', ' ')}</span>
+                                </Badge>
                               </div>
-                              <Progress value={task.progress} className="h-2" />
                             </div>
-                            <p className="text-sm text-muted-foreground mt-2">
-                              Created: {new Date(task.created_at).toLocaleString()}
-                            </p>
                           </div>
-                          <div className="flex space-x-2 ml-4">
+                          <div className="flex space-x-2">
                             <Button variant="outline" size="sm">
                               <Play className="h-4 w-4" />
                             </Button>
                             <Button variant="outline" size="sm">
-                              <Pause className="h-4 w-4" />
+                              <FileText className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
-                      </Card>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Progress</span>
+                            <span>{task.progress}%</span>
+                          </div>
+                          <Progress value={task.progress} className="h-2" />
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          Created: {new Date(task.createdAt).toLocaleString()}
+                        </p>
+                      </div>
                     ))}
                   </div>
                 </ScrollArea>
@@ -307,7 +425,7 @@ function App() {
             </Card>
           </TabsContent>
 
-          {/* Create Task Tab */}
+          {/* Create Tab */}
           <TabsContent value="create" className="space-y-6">
             <Card>
               <CardHeader>
@@ -315,47 +433,45 @@ function App() {
                   <Plus className="h-5 w-5" />
                   <span>Create New Task</span>
                 </CardTitle>
-                <CardDescription>
-                  Define a new task for the AI agent to execute
-                </CardDescription>
+                <CardDescription>Define a new task for the AI agent to execute</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Task Description</label>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Task Description</label>
                   <Textarea
                     placeholder="Describe what you want the AI agent to do..."
                     value={newTask.description}
                     onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
-                    className="min-h-24"
+                    className="min-h-[100px]"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Task Type</label>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Task Type</label>
                     <Select value={newTask.type} onValueChange={(value) => setNewTask(prev => ({ ...prev, type: value }))}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="general">General</SelectItem>
                         <SelectItem value="website_creation">Website Creation</SelectItem>
                         <SelectItem value="app_development">App Development</SelectItem>
                         <SelectItem value="data_analysis">Data Analysis</SelectItem>
-                        <SelectItem value="planning">Planning</SelectItem>
-                        <SelectItem value="deployment">Deployment</SelectItem>
-                        <SelectItem value="general">General</SelectItem>
+                        <SelectItem value="llm_finetuning">LLM Fine-tuning</SelectItem>
+                        <SelectItem value="app_testing">App Testing</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Priority</label>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Priority</label>
                     <Select value={newTask.priority} onValueChange={(value) => setNewTask(prev => ({ ...prev, priority: value }))}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
                         <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -368,8 +484,8 @@ function App() {
             </Card>
           </TabsContent>
 
-          {/* Monitoring Tab */}
-          <TabsContent value="monitoring" className="space-y-6">
+          {/* Monitor Tab */}
+          <TabsContent value="monitor" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
@@ -378,23 +494,27 @@ function App() {
                     <span>System Health</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
                       <span>CPU Usage</span>
                       <span>23%</span>
                     </div>
-                    <Progress value={23} />
-                    <div className="flex items-center justify-between">
+                    <Progress value={23} className="h-2" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
                       <span>Memory Usage</span>
                       <span>45%</span>
                     </div>
-                    <Progress value={45} />
-                    <div className="flex items-center justify-between">
+                    <Progress value={45} className="h-2" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
                       <span>Task Queue</span>
                       <span>2 pending</span>
                     </div>
-                    <Progress value={20} />
+                    <Progress value={20} className="h-2" />
                   </div>
                 </CardContent>
               </Card>
@@ -406,136 +526,345 @@ function App() {
                     <span>Version Control</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span>Current Branch</span>
-                      <Badge variant="outline">main</Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Last Commit</span>
-                      <span className="text-sm text-muted-foreground">2 hours ago</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Repository Status</span>
-                      <Badge className="bg-green-100 text-green-800">Clean</Badge>
-                    </div>
-                    <Button variant="outline" className="w-full">
-                      <GitBranch className="h-4 w-4 mr-2" />
-                      View Repository
-                    </Button>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium">Current Branch</span>
+                    <span className="text-sm">main</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium">Last Commit</span>
+                    <span className="text-sm">2 hours ago</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium">Repository Status</span>
+                    <Badge className="bg-green-100 text-green-800">Clean</Badge>
+                  </div>
+                  <Button variant="outline" className="w-full">
+                    <GitBranch className="h-4 w-4 mr-2" />
+                    View Repository
+                  </Button>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
-          {/* Capabilities Tab */}
-          <TabsContent value="capabilities" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Fine-tuning Tab */}
+          <TabsContent value="finetuning" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
-                    <Globe className="h-5 w-5" />
-                    <span>Website Creation</span>
+                    <Plus className="h-5 w-5" />
+                    <span>Create Fine-tuning Job</span>
                   </CardTitle>
+                  <CardDescription>Train a custom LLM model with your data</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Create responsive websites using modern frameworks
-                  </p>
+                <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Badge variant="outline">React</Badge>
-                    <Badge variant="outline">HTML/CSS/JS</Badge>
-                    <Badge variant="outline">Static Sites</Badge>
+                    <label className="text-sm font-medium">Base Model</label>
+                    <Select value={newFineTuningJob.model} onValueChange={(value) => setNewFineTuningJob(prev => ({ ...prev, model: value }))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
+                        <SelectItem value="gpt-4">GPT-4</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Training Data (JSONL)</label>
+                    <Textarea
+                      placeholder='{"messages": [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]}'
+                      value={newFineTuningJob.training_data}
+                      onChange={(e) => setNewFineTuningJob(prev => ({ ...prev, training_data: e.target.value }))}
+                      className="min-h-[100px] font-mono text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Model Suffix (Optional)</label>
+                    <Input
+                      placeholder="custom-model"
+                      value={newFineTuningJob.suffix}
+                      onChange={(e) => setNewFineTuningJob(prev => ({ ...prev, suffix: e.target.value }))}
+                    />
+                  </div>
+                  <Button onClick={handleCreateFineTuningJob} className="w-full">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Start Fine-tuning
+                  </Button>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
-                    <Code className="h-5 w-5" />
-                    <span>App Development</span>
+                    <Brain className="h-5 w-5" />
+                    <span>Fine-tuning Jobs</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Develop web applications and APIs
-                  </p>
-                  <div className="space-y-2">
-                    <Badge variant="outline">Flask</Badge>
-                    <Badge variant="outline">FastAPI</Badge>
-                    <Badge variant="outline">Node.js</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Database className="h-5 w-5" />
-                    <span>Data Analysis</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Analyze data and generate insights
-                  </p>
-                  <div className="space-y-2">
-                    <Badge variant="outline">Python</Badge>
-                    <Badge variant="outline">Pandas</Badge>
-                    <Badge variant="outline">Plotly</Badge>
-                  </div>
+                  <ScrollArea className="h-64">
+                    <div className="space-y-3">
+                      {fineTuningJobs.map((job) => (
+                        <div key={job.id} className="border rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              {getStatusIcon(job.status)}
+                              <span className="font-medium text-sm">{job.id}</span>
+                            </div>
+                            <Badge className={getStatusColor(job.status)}>
+                              {job.status}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-gray-500 space-y-1">
+                            <div>Model: {job.model}</div>
+                            <div>Created: {new Date(job.created_at).toLocaleString()}</div>
+                            {job.fine_tuned_model && (
+                              <div>Fine-tuned Model: {job.fine_tuned_model}</div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 </CardContent>
               </Card>
             </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Download className="h-5 w-5" />
+                  <span>Fine-tuned Models</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {fineTunedModels.map((model) => (
+                    <div key={model.id} className="border rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-sm">{model.id}</div>
+                          <div className="text-xs text-gray-500">
+                            Created: {new Date(model.created * 1000).toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button variant="outline" size="sm">
+                            <Play className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            <TestTube className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Testing Tab */}
+          <TabsContent value="testing" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <TestTube className="h-5 w-5" />
+                    <span>Run Application Tests</span>
+                  </CardTitle>
+                  <CardDescription>Test generated applications for quality and functionality</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Project Path</label>
+                    <Input
+                      placeholder="/path/to/your/project"
+                      value={projectPath}
+                      onChange={(e) => setProjectPath(e.target.value)}
+                    />
+                  </div>
+                  <Button onClick={handleRunTests} className="w-full">
+                    <Play className="h-4 w-4 mr-2" />
+                    Run Comprehensive Tests
+                  </Button>
+                  <div className="text-xs text-gray-500">
+                    Tests include: Unit tests, Integration tests, Performance tests, Security checks
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <FileText className="h-5 w-5" />
+                    <span>Test Sessions</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-64">
+                    <div className="space-y-3">
+                      {testSessions.map((session) => (
+                        <div key={session.id} className="border rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              {session.overall_success ? 
+                                <CheckCircle className="h-4 w-4 text-green-500" /> : 
+                                <XCircle className="h-4 w-4 text-red-500" />
+                              }
+                              <span className="font-medium text-sm">{session.id}</span>
+                            </div>
+                            <Badge className={session.overall_success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                              {session.overall_success ? 'PASS' : 'FAIL'}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-gray-500 space-y-1">
+                            <div>Project: {session.project_path}</div>
+                            <div>Run: {new Date(session.timestamp).toLocaleString()}</div>
+                          </div>
+                          <div className="flex space-x-2 mt-2">
+                            <Button variant="outline" size="sm">
+                              <FileText className="h-4 w-4 mr-1" />
+                              Report
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <BarChart3 className="h-5 w-5" />
+                  <span>Testing Capabilities</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 border rounded-lg">
+                    <TestTube className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                    <h3 className="font-medium">Unit Testing</h3>
+                    <p className="text-sm text-gray-500">Individual component validation</p>
+                  </div>
+                  <div className="text-center p-4 border rounded-lg">
+                    <Zap className="h-8 w-8 mx-auto mb-2 text-orange-600" />
+                    <h3 className="font-medium">Integration Testing</h3>
+                    <p className="text-sm text-gray-500">Component interaction validation</p>
+                  </div>
+                  <div className="text-center p-4 border rounded-lg">
+                    <Activity className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                    <h3 className="font-medium">Performance Testing</h3>
+                    <p className="text-sm text-gray-500">Load and stress testing</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* System Tab */}
           <TabsContent value="system" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Server className="h-5 w-5" />
+                    <span>System Information</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium">Version</span>
+                    <span className="text-sm">2.0.0</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium">Uptime</span>
+                    <span className="text-sm">2h 34m</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium">Environment</span>
+                    <span className="text-sm">Development</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium">Python Version</span>
+                    <span className="text-sm">3.11.0</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium">Node.js Version</span>
+                    <span className="text-sm">20.18.0</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Cpu className="h-5 w-5" />
+                    <span>Resource Usage</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>CPU Cores</span>
+                      <span>4 cores</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Memory</span>
+                      <span>8 GB</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Disk Space</span>
+                      <span>256 GB SSD</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <Server className="h-5 w-5" />
-                  <span>System Information</span>
+                  <Brain className="h-5 w-5" />
+                  <span>AI Capabilities</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <h4 className="font-semibold">Agent Information</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Version</span>
-                        <span>1.0.0</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Uptime</span>
-                        <span>2h 34m</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Tasks Processed</span>
-                        <span>127</span>
-                      </div>
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="text-center p-4 border rounded-lg">
+                    <Globe className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                    <h3 className="font-medium">Website Creation</h3>
+                    <p className="text-sm text-gray-500">React, HTML/CSS/JS, Static Sites</p>
                   </div>
-                  <div className="space-y-3">
-                    <h4 className="font-semibold">Environment</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Python Version</span>
-                        <span>3.11.0</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Node.js Version</span>
-                        <span>20.18.0</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Git Version</span>
-                        <span>2.34.1</span>
-                      </div>
-                    </div>
+                  <div className="text-center p-4 border rounded-lg">
+                    <Code className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                    <h3 className="font-medium">App Development</h3>
+                    <p className="text-sm text-gray-500">Flask, FastAPI, Node.js</p>
+                  </div>
+                  <div className="text-center p-4 border rounded-lg">
+                    <BarChart3 className="h-8 w-8 mx-auto mb-2 text-purple-600" />
+                    <h3 className="font-medium">Data Analysis</h3>
+                    <p className="text-sm text-gray-500">Python, Pandas, Plotly</p>
+                  </div>
+                  <div className="text-center p-4 border rounded-lg">
+                    <Brain className="h-8 w-8 mx-auto mb-2 text-orange-600" />
+                    <h3 className="font-medium">LLM Fine-tuning</h3>
+                    <p className="text-sm text-gray-500">OpenAI GPT models</p>
+                  </div>
+                  <div className="text-center p-4 border rounded-lg">
+                    <TestTube className="h-8 w-8 mx-auto mb-2 text-red-600" />
+                    <h3 className="font-medium">App Testing</h3>
+                    <p className="text-sm text-gray-500">Automated testing suites</p>
+                  </div>
+                  <div className="text-center p-4 border rounded-lg">
+                    <GitBranch className="h-8 w-8 mx-auto mb-2 text-gray-600" />
+                    <h3 className="font-medium">Version Control</h3>
+                    <p className="text-sm text-gray-500">Git integration</p>
                   </div>
                 </div>
               </CardContent>
