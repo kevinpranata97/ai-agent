@@ -8,11 +8,12 @@ import logging
 import logging.handlers
 from datetime import datetime
 
-def setup_logging(log_level=logging.INFO, log_dir="logs"):
+def setup_logging(name=None, log_level=logging.INFO, log_dir="logs"):
     """
     Setup centralized logging for the AI Agent.
     
     Args:
+        name: Logger name (optional, defaults to 'ai_agent')
         log_level: Logging level (default: INFO)
         log_dir: Directory to store log files
         
@@ -23,12 +24,15 @@ def setup_logging(log_level=logging.INFO, log_dir="logs"):
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     
-    # Create logger
-    logger = logging.getLogger('ai_agent')
-    logger.setLevel(log_level)
+    # Create logger with specific name or default
+    logger_name = name if name else 'ai_agent'
+    logger = logging.getLogger(logger_name)
     
-    # Clear any existing handlers
-    logger.handlers.clear()
+    # If logger already has handlers, return it
+    if logger.handlers:
+        return logger
+        
+    logger.setLevel(log_level)
     
     # Create formatters
     detailed_formatter = logging.Formatter(
@@ -79,7 +83,7 @@ def setup_logging(log_level=logging.INFO, log_dir="logs"):
     task_handler.addFilter(TaskFilter())
     logger.addHandler(task_handler)
     
-    logger.info("Logging system initialized")
+    logger.info(f"Logging system initialized for {logger_name}")
     
     return logger
 
@@ -121,7 +125,8 @@ def get_task_logger(task_id: str, log_dir="logs"):
     
     # Also add to main logger
     main_logger = logging.getLogger('ai_agent')
-    logger.addHandler(main_logger.handlers[0])  # Console handler
+    if main_logger.handlers:
+        logger.addHandler(main_logger.handlers[0])  # Console handler
     
     return logger
 

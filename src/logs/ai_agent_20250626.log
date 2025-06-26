@@ -1,0 +1,18 @@
+2025-06-26 00:03:46,763 - modules.llm_finetuning - INFO - setup_logging:86 - Logging system initialized for modules.llm_finetuning
+2025-06-26 00:03:46,769 - modules.app_testing - INFO - setup_logging:86 - Logging system initialized for modules.app_testing
+2025-06-26 00:03:46,770 - __main__ - INFO - setup_logging:86 - Logging system initialized for __main__
+2025-06-26 00:03:46,771 - __main__ - INFO - <module>:35 - Initializing AI Agent...
+2025-06-26 00:03:46,773 - __main__ - WARNING - <module>:48 - LLM Fine-tuning module initialization failed: OpenAI API key is required. Set OPENAI_API_KEY environment variable or pass api_key parameter.
+2025-06-26 00:03:46,773 - modules.app_testing - INFO - __init__:40 - Application Testing Module initialized
+2025-06-26 00:03:46,773 - __main__ - INFO - <module>:62 - AI Agent initialized successfully!
+2025-06-26 00:04:33,487 - modules.llm_finetuning - INFO - setup_logging:86 - Logging system initialized for modules.llm_finetuning
+2025-06-26 00:04:33,488 - modules.app_testing - INFO - setup_logging:86 - Logging system initialized for modules.app_testing
+2025-06-26 00:04:33,489 - main - INFO - setup_logging:86 - Logging system initialized for main
+2025-06-26 00:04:33,490 - main - INFO - <module>:35 - Initializing AI Agent...
+2025-06-26 00:04:33,492 - main - WARNING - <module>:48 - LLM Fine-tuning module initialization failed: OpenAI API key is required. Set OPENAI_API_KEY environment variable or pass api_key parameter.
+2025-06-26 00:04:33,492 - modules.app_testing - INFO - __init__:40 - Application Testing Module initialized
+2025-06-26 00:04:33,492 - main - INFO - <module>:62 - AI Agent initialized successfully!
+2025-06-26 00:04:57,219 - modules.app_testing - INFO - analyze_project_structure:52 - Analyzing project structure: /home/ubuntu/ai-agent
+2025-06-26 00:04:57,342 - modules.app_testing - INFO - analyze_project_structure:146 - Project analysis completed: nodejs project with 3 languages
+2025-06-26 00:06:17,853 - modules.app_testing - INFO - analyze_project_structure:52 - Analyzing project structure: /home/ubuntu/ai-agent
+2025-06-26 00:06:17,975 - modules.app_testing - INFO - analyze_project_structure:146 - Project analysis completed: nodejs project with 3 languages

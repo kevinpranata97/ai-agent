@@ -1,0 +1,5 @@
+2025-06-26 00:06:17,473 - modules.app_testing - INFO - setup_logging:86 - Logging system initialized for modules.app_testing
+2025-06-26 00:06:17,473 - modules.app_testing - INFO - __init__:40 - Application Testing Module initialized
+2025-06-26 00:06:17,473 - modules.app_testing - INFO - analyze_project_structure:52 - Analyzing project structure: /home/ubuntu/ai-agent
+2025-06-26 00:06:17,594 - modules.app_testing - INFO - analyze_project_structure:146 - Project analysis completed: nodejs project with 3 languages
+2025-06-26 00:06:17,850 - modules.llm_finetuning - INFO - setup_logging:86 - Logging system initialized for modules.llm_finetuning
